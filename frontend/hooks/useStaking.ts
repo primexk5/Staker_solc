@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Contract, formatEther, parseEther, JsonRpcProvider } from 'ethers';
-import { useWriteContract, usePublicClient } from 'wagmi';
+import { useWriteContract } from 'wagmi';
 import { ABI, VIEM_ABI, CONTRACT_ADDRESS } from '@/lib/contract';
 import { useTransaction } from './useTransaction';
 
@@ -15,6 +15,19 @@ function getReadProvider(): JsonRpcProvider {
   return new JsonRpcProvider(
     process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.public.blastapi.io'
   );
+}
+
+// Poll eth_getTransactionReceipt directly using the read provider instead of
+// publicClient.waitForTransactionReceipt — the wagmi hook client gets invalidated
+// mid-transaction and hangs forever on a stale reference.
+async function waitForReceipt(hash: string): Promise<void> {
+  const provider = getReadProvider();
+  for (let i = 0; i < 40; i++) {
+    const receipt = await provider.getTransactionReceipt(hash);
+    if (receipt !== null) return;
+    await new Promise(r => setTimeout(r, 3000));
+  }
+  throw new Error('Transaction not confirmed after 2 minutes.');
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -51,7 +64,6 @@ function getAPR(amount: bigint): number {
 
 export function useStaking(account: string | null) {
   const { writeContractAsync } = useWriteContract();
-  const publicClient = usePublicClient();
 
   const [data, setData] = useState<StakingData>({
     positions: [],
@@ -129,17 +141,11 @@ export function useStaking(account: string | null) {
         functionName: 'stake',
         value: parseEther(ethAmount),
       });
-      return {
-        hash,
-        wait: () => {
-          if (!publicClient) throw new Error('Wallet provider not ready');
-          return publicClient.waitForTransactionReceipt({ hash });
-        }
-      };
+      return { hash, wait: () => waitForReceipt(hash) };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runStake, refresh, publicClient]);
+  }, [writeContractAsync, runStake, refresh]);
 
   const claimRewards = useCallback(async (stakeId: number): Promise<boolean> => {
     const ok = await runClaim(async () => {
@@ -149,17 +155,11 @@ export function useStaking(account: string | null) {
         functionName: 'claimRewards',
         args: [BigInt(stakeId)],
       });
-      return {
-        hash,
-        wait: () => {
-          if (!publicClient) throw new Error('Wallet provider not ready');
-          return publicClient.waitForTransactionReceipt({ hash });
-        }
-      };
+      return { hash, wait: () => waitForReceipt(hash) };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runClaim, refresh, publicClient]);
+  }, [writeContractAsync, runClaim, refresh]);
 
   const unstake = useCallback(async (stakeId: number): Promise<boolean> => {
     const ok = await runUnstake(async () => {
@@ -169,17 +169,11 @@ export function useStaking(account: string | null) {
         functionName: 'unstake',
         args: [BigInt(stakeId)],
       });
-      return {
-        hash,
-        wait: () => {
-          if (!publicClient) throw new Error('Wallet provider not ready');
-          return publicClient.waitForTransactionReceipt({ hash });
-        }
-      };
+      return { hash, wait: () => waitForReceipt(hash) };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runUnstake, refresh, publicClient]);
+  }, [writeContractAsync, runUnstake, refresh]);
 
   return {
     data,
