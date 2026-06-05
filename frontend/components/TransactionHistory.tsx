@@ -27,7 +27,12 @@ export function TransactionHistory({ account, refreshTrigger }: { account: strin
   const reload = () =>
     setEntries(JSON.parse(localStorage.getItem(storageKey(account)) || '[]'));
 
-  useEffect(() => { reload(); }, [account, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      reload();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [account, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Live event listener.
   // We poll manually with provider.getLogs instead of contract.on(...). ethers' built-in
@@ -37,7 +42,11 @@ export function TransactionHistory({ account, refreshTrigger }: { account: strin
   // ourselves keeps every request inside a try/catch and bounds the getLogs range to ≤10
   // blocks, which is required by Alchemy's free tier.
   useEffect(() => {
-    const provider = new JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL!, undefined, { staticNetwork: true });
+    const provider = new JsonRpcProvider(
+      process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.public.blastapi.io',
+      undefined,
+      { staticNetwork: true }
+    );
     const iface = new Contract(CONTRACT_ADDRESS, ABI, provider).interface;
     let stopped = false;
     let lastBlock = -1; // -1 → first poll establishes the baseline (only catch *new* events)
