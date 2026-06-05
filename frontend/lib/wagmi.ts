@@ -4,7 +4,7 @@ import {
   rainbowWallet,
   walletConnectWallet,
 } from '@rainbow-me/rainbowkit/wallets';
-import { createConfig, http } from 'wagmi';
+import { createConfig, http, fallback } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
@@ -28,7 +28,12 @@ export const wagmiConfig = createConfig({
   connectors,
   chains: [sepolia],
   transports: {
-    [sepolia.id]: http(process.env.NEXT_PUBLIC_RPC_URL),
+    [sepolia.id]: fallback([
+      http(process.env.NEXT_PUBLIC_RPC_URL),
+      http('https://eth-sepolia.public.blastapi.io'),
+      http('https://sepolia.drpc.org'),
+      http(),
+    ]),
   },
   ssr: true,
 });

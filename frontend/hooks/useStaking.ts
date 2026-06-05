@@ -2,9 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { Contract, formatEther, parseEther, JsonRpcProvider } from 'ethers';
-import { useWriteContract } from 'wagmi';
-import { createPublicClient, http } from 'viem';
-import { sepolia } from 'viem/chains';
+import { useWriteContract, usePublicClient } from 'wagmi';
 import { ABI, VIEM_ABI, CONTRACT_ADDRESS } from '@/lib/contract';
 import { useTransaction } from './useTransaction';
 
@@ -14,14 +12,10 @@ import { useTransaction } from './useTransaction';
 // bridge called eth_requestAccounts through wagmi's transport wrapper, which conflicted with
 // wagmi's already-connected account state and silently prevented the wallet from prompting.
 function getReadProvider(): JsonRpcProvider {
-  return new JsonRpcProvider(process.env.NEXT_PUBLIC_RPC_URL!);
+  return new JsonRpcProvider(
+    process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.public.blastapi.io'
+  );
 }
-
-// Viem public client used only to wait for receipts after writeContractAsync returns a hash.
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(process.env.NEXT_PUBLIC_RPC_URL),
-});
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -57,6 +51,7 @@ function getAPR(amount: bigint): number {
 
 export function useStaking(account: string | null) {
   const { writeContractAsync } = useWriteContract();
+  const publicClient = usePublicClient();
 
   const [data, setData] = useState<StakingData>({
     positions: [],
@@ -119,7 +114,12 @@ export function useStaking(account: string | null) {
     }
   }, [account, readContract]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      refresh();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [refresh]);
 
   const stake = useCallback(async (ethAmount: string): Promise<boolean> => {
     const ok = await runStake(async () => {
@@ -129,11 +129,17 @@ export function useStaking(account: string | null) {
         functionName: 'stake',
         value: parseEther(ethAmount),
       });
-      return { hash, wait: () => publicClient.waitForTransactionReceipt({ hash }) };
+      return {
+        hash,
+        wait: () => {
+          if (!publicClient) throw new Error('Wallet provider not ready');
+          return publicClient.waitForTransactionReceipt({ hash });
+        }
+      };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runStake, refresh]);
+  }, [writeContractAsync, runStake, refresh, publicClient]);
 
   const claimRewards = useCallback(async (stakeId: number): Promise<boolean> => {
     const ok = await runClaim(async () => {
@@ -143,11 +149,17 @@ export function useStaking(account: string | null) {
         functionName: 'claimRewards',
         args: [BigInt(stakeId)],
       });
-      return { hash, wait: () => publicClient.waitForTransactionReceipt({ hash }) };
+      return {
+        hash,
+        wait: () => {
+          if (!publicClient) throw new Error('Wallet provider not ready');
+          return publicClient.waitForTransactionReceipt({ hash });
+        }
+      };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runClaim, refresh]);
+  }, [writeContractAsync, runClaim, refresh, publicClient]);
 
   const unstake = useCallback(async (stakeId: number): Promise<boolean> => {
     const ok = await runUnstake(async () => {
@@ -157,11 +169,17 @@ export function useStaking(account: string | null) {
         functionName: 'unstake',
         args: [BigInt(stakeId)],
       });
-      return { hash, wait: () => publicClient.waitForTransactionReceipt({ hash }) };
+      return {
+        hash,
+        wait: () => {
+          if (!publicClient) throw new Error('Wallet provider not ready');
+          return publicClient.waitForTransactionReceipt({ hash });
+        }
+      };
     });
     if (ok) await refresh();
     return ok;
-  }, [writeContractAsync, runUnstake, refresh]);
+  }, [writeContractAsync, runUnstake, refresh, publicClient]);
 
   return {
     data,
