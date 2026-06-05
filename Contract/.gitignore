@@ -1,0 +1,13 @@
+# secrets
+.env
+.env.*
+
+# dependencies
+node_modules/
+
+# hardhat
+cache/
+artifacts/
+
+# misc
+.DS_Store

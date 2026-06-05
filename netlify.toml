@@ -1,0 +1,12 @@
+[build]
+  base    = "frontend"
+  command = "pnpm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION             = "20"
+  NEXT_TELEMETRY_DISABLED  = "1"
+
+# Netlify's Next.js runtime handles SSR, API routes, and ISR automatically.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
