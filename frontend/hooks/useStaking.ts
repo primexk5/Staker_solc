@@ -12,9 +12,9 @@ import { useTransaction } from './useTransaction';
 // bridge called eth_requestAccounts through wagmi's transport wrapper, which conflicted with
 // wagmi's already-connected account state and silently prevented the wallet from prompting.
 function getReadProvider(): JsonRpcProvider {
-  return new JsonRpcProvider(
-    process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.public.blastapi.io'
-  );
+  // Use the server-side proxy so the Alchemy key stays out of the browser bundle
+  // and CORS is never an issue on any deployment domain.
+  return new JsonRpcProvider('/api/rpc');
 }
 
 // Poll eth_getTransactionReceipt directly using the read provider instead of

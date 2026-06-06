@@ -42,11 +42,7 @@ export function TransactionHistory({ account, refreshTrigger }: { account: strin
   // ourselves keeps every request inside a try/catch and bounds the getLogs range to ≤10
   // blocks, which is required by Alchemy's free tier.
   useEffect(() => {
-    const provider = new JsonRpcProvider(
-      process.env.NEXT_PUBLIC_RPC_URL || 'https://eth-sepolia.public.blastapi.io',
-      undefined,
-      { staticNetwork: true }
-    );
+    const provider = new JsonRpcProvider('/api/rpc', undefined, { staticNetwork: true });
     const iface = new Contract(CONTRACT_ADDRESS, ABI, provider).interface;
     let stopped = false;
     let lastBlock = -1; // -1 → first poll establishes the baseline (only catch *new* events)
