@@ -32,10 +32,6 @@ export const ABI = [
   "event FundsWithdrawn(address indexed owner, uint256 amount)",
 ] as const;
 
-// Viem-compatible ABI used by wagmi write hooks (useWriteContract).
-// Kept separate from the ethers string ABI used by JsonRpcProvider reads so neither path changes.
-// Only the three write functions called via useWriteContract — view functions stay in the
-// ethers string ABI above, which handles the tuple return type fine.
 export const VIEM_ABI = parseAbi([
   "function stake() external payable",
   "function claimRewards(uint256 stakeId) external",

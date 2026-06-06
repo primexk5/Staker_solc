@@ -34,13 +34,7 @@ export function TransactionHistory({ account, refreshTrigger }: { account: strin
     return () => clearTimeout(timer);
   }, [account, refreshTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Live event listener.
-  // We poll manually with provider.getLogs instead of contract.on(...). ethers' built-in
-  // event polling (PollingEventSubscriber.start) calls eth_blockNumber without a .catch(),
-  // so a timed-out or destroy-cancelled request becomes an *uncatchable* unhandled rejection
-  // ("could not coalesce error" / "provider destroyed; cancelled request"). Driving the poll
-  // ourselves keeps every request inside a try/catch and bounds the getLogs range to ≤10
-  // blocks, which is required by Alchemy's free tier.
+
   useEffect(() => {
     const provider = new JsonRpcProvider('/api/rpc', undefined, { staticNetwork: true });
     const iface = new Contract(CONTRACT_ADDRESS, ABI, provider).interface;

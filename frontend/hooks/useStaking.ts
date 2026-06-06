@@ -6,20 +6,10 @@ import { useWriteContract } from 'wagmi';
 import { ABI, VIEM_ABI, CONTRACT_ADDRESS } from '@/lib/contract';
 import { useTransaction } from './useTransaction';
 
-// Reads use ethers JsonRpcProvider directly (no BrowserProvider / wagmi transport bridge).
-// Writes use wagmi's useWriteContract which routes through the connected viem WalletClient —
-// this is the only correct path in wagmi v2+. The old BrowserProvider(client.transport)
-// bridge called eth_requestAccounts through wagmi's transport wrapper, which conflicted with
-// wagmi's already-connected account state and silently prevented the wallet from prompting.
 function getReadProvider(): JsonRpcProvider {
-  // Use the server-side proxy so the Alchemy key stays out of the browser bundle
-  // and CORS is never an issue on any deployment domain.
   return new JsonRpcProvider('/api/rpc');
 }
 
-// Poll eth_getTransactionReceipt directly using the read provider instead of
-// publicClient.waitForTransactionReceipt — the wagmi hook client gets invalidated
-// mid-transaction and hangs forever on a stale reference.
 async function waitForReceipt(hash: string): Promise<void> {
   const provider = getReadProvider();
   for (let i = 0; i < 40; i++) {
@@ -30,7 +20,6 @@ async function waitForReceipt(hash: string): Promise<void> {
   throw new Error('Transaction not confirmed after 2 minutes.');
 }
 
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface StakePosition {
   id: number;

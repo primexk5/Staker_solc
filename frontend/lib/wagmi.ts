@@ -28,13 +28,10 @@ export const wagmiConfig = createConfig({
   connectors,
   chains: [sepolia],
   transports: {
-    // /api/rpc is the server-side proxy (works on all domains, no CORS).
-    // NEXT_PUBLIC_RPC_URL is the direct Alchemy URL used on the server during SSR
-    // (relative URLs can't be resolved server-side).
     [sepolia.id]: http(
       typeof window === 'undefined'
-        ? process.env.NEXT_PUBLIC_RPC_URL   // server/SSR: direct URL
-        : '/api/rpc'                         // browser: proxy
+        ? process.env.NEXT_PUBLIC_RPC_URL 
+        : '/api/rpc'                         
     ),
   },
   ssr: true,
